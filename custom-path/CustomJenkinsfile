@@ -13,93 +13,62 @@ pipeline {
   }
 
   stages {
-    stage('Create dummy PS1 artifact') {
-      steps {
-        sh '''
-          set -eu
 
-          mkdir -p build-output
+        stage('Create dummy PS1 artifact') {
+            steps {
 
-          REPOSITORY_URL="$(git config --get remote.origin.url || true)"
-          COMMIT_SHA="$(git rev-parse HEAD || true)"
-          COMMIT_SHORT_SHA="$(git rev-parse --short HEAD || true)"
-          COMMIT_MESSAGE="$(git log -1 --pretty=%B || true)"
-          COMMIT_AUTHOR_NAME="$(git log -1 --pretty=%an || true)"
-          COMMIT_AUTHOR_EMAIL="$(git log -1 --pretty=%ae || true)"
-          COMMIT_AUTHOR_DATE="$(git log -1 --pretty=%aI || true)"
-          COMMIT_COMMITTER_NAME="$(git log -1 --pretty=%cn || true)"
-          COMMIT_COMMITTER_EMAIL="$(git log -1 --pretty=%ce || true)"
-          COMMIT_COMMITTER_DATE="$(git log -1 --pretty=%cI || true)"
+                sh '''
+                    set -eu
 
-          cat > build-output/dummy.ps1 <<EOF
+                    mkdir -p build-output
+
+                    cat > build-output/dummy.ps1 <<'EOF'
 Write-Host "Hello from SignPath test artifact"
-
-Write-Host "Build Number: ${BUILD_NUMBER}"
-Write-Host "Build ID: ${BUILD_ID}"
-Write-Host "Build URL: ${BUILD_URL}"
-Write-Host "Job Name: ${JOB_NAME}"
-Write-Host "Job Base Name: ${JOB_BASE_NAME}"
-Write-Host "Node Name: ${NODE_NAME}"
-Write-Host "Workspace: ${WORKSPACE}"
-
-Write-Host "Branch Name: ${BRANCH_NAME:-}"
-Write-Host "Git Branch: ${GIT_BRANCH:-}"
-Write-Host "Git Commit: ${GIT_COMMIT:-}"
-Write-Host "Git URL: ${GIT_URL:-}"
-
-Write-Host "Repository URL: ${REPOSITORY_URL}"
-Write-Host "Commit SHA: ${COMMIT_SHA}"
-Write-Host "Commit Short SHA: ${COMMIT_SHORT_SHA}"
-Write-Host "Commit Message: ${COMMIT_MESSAGE}"
-Write-Host "Commit Author Name: ${COMMIT_AUTHOR_NAME}"
-Write-Host "Commit Author Email: ${COMMIT_AUTHOR_EMAIL}"
-Write-Host "Commit Author Date: ${COMMIT_AUTHOR_DATE}"
-Write-Host "Commit Committer Name: ${COMMIT_COMMITTER_NAME}"
-Write-Host "Commit Committer Email: ${COMMIT_COMMITTER_EMAIL}"
-Write-Host "Commit Committer Date: ${COMMIT_COMMITTER_DATE}"
+Write-Host "Build Number: $env:BUILD_NUMBER"
 EOF
-        '''
+                '''
 
-        archiveArtifacts artifacts: 'build-output/dummy.ps1', fingerprint: true
-      }
-    }
-
-    stage('Submit signing request') {
-      steps {
-        script {
-          def body = [
-            jobFullName: env.JOB_NAME,
-            buildNumber: env.BUILD_NUMBER as Integer,
-            artifactPath: 'build-output/dummy.ps1',
-
-            signPathOrganizationId: env.SIGNPATH_ORGANIZATION_ID,
-            signPathApiToken: 'PLACEHOLDER_SIGNPATH_API_TOKEN',
-            signPathProjectSlug: env.SIGNPATH_PROJECT_SLUG,
-            signPathSigningPolicySlug: env.SIGNPATH_SIGNING_POLICY_SLUG,
-            signPathArtifactConfigurationSlug: env.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG,
-            signingRequestDescription: "Pipeline connector test",
-
-            parameters: []
-          ]
-
-          writeFile(
-            file: 'signing-request.json',
-            text: groovy.json.JsonOutput.prettyPrint(
-              groovy.json.JsonOutput.toJson(body)
-            )
-          )
-
-          sh '''
-            set -eu
-
-            curl \
-              -X POST \
-              "$CONNECTOR_BASE_URL/Jenkins/$ENDPOINT_SLUG/$CONNECTOR_ORGANIZATION_ID/SigningRequests" \
-              -H "Content-Type: application/json" \
-              --data-binary @signing-request.json
-          '''
+                archiveArtifacts artifacts: 'build-output/dummy.ps1', fingerprint: true
+            }
         }
-      }
+
+        stage('Submit signing request') {
+            steps {
+                script {
+
+                    def body = [
+                        jobFullName: env.JOB_NAME,
+                        buildNumber: env.BUILD_NUMBER as Integer,
+                        artifactPath: 'build-output/dummy.ps1',
+
+                        signPathOrganizationId: env.SIGNPATH_ORGANIZATION_ID,
+                        signPathApiToken: 'PLACEHOLDER_SIGNPATH_API_TOKEN',
+                        signPathProjectSlug: env.SIGNPATH_PROJECT_SLUG,
+                        signPathSigningPolicySlug: env.SIGNPATH_SIGNING_POLICY_SLUG,
+                        signPathArtifactConfigurationSlug: env.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG,
+                        signingRequestDescription: "Pipeline connector test",
+
+                        parameters: []
+                    ]
+
+                    writeFile(
+                        file: 'signing-request.json',
+                        text: groovy.json.JsonOutput.prettyPrint(
+                            groovy.json.JsonOutput.toJson(body)
+                        )
+                    )
+
+                    sh '''
+                        set -eu
+
+                        curl \
+                          -X POST \
+                          "$CONNECTOR_BASE_URL/Jenkins/$ENDPOINT_SLUG/$CONNECTOR_ORGANIZATION_ID/SigningRequests" \
+                          -H "Content-Type: application/json" \
+                          --data-binary @signing-request.json
+                    '''
+                }
+            }
+        }
     }
-  }
 }
