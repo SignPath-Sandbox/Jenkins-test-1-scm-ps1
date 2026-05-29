@@ -4,21 +4,26 @@ pipeline {
     stages {
         stage('Checkout PowerShell file') {
             steps {
-                dir('temp-script-repo') {
-                    checkout([
-                        $class: 'GitSCM',
-                        branches: [[name: '*/branchA']],
-                        userRemoteConfigs: [[
-                            url: 'https://github.com/SignPath-Sandbox/Jenkins-test-3-scm-ps1.git'
-                        ]]
-                    ])
-                }
-
                 sh '''
+                    set -eu
+
                     mkdir -p build-output
+
+                    rm -rf temp-script-repo
+                    git clone --depth 1 --branch main https://github.com/SignPath-Sandbox/Jenkins-test-3-scm-ps1.git temp-script-repo
+
                     cp temp-script-repo/script.ps1 build-output/script.ps1
+
+                    ls -lh build-output
+                    cat build-output/script.ps1
                 '''
             }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: 'build-output/**', fingerprint: true
         }
     }
 }
