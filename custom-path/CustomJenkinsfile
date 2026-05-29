@@ -21,6 +21,10 @@ pipeline {
           @'
 Write-Host "Hello from dummy SignPath test script"
 Write-Host "Build: $env:BUILD_NUMBER"
+Write-Host "Job Name: ${env.JOB_NAME}"
+Write-Host "Branch: ${env.BRANCH_NAME}"
+Write-Host "Commit: ${env.GIT_COMMIT}"
+Write-Host "Repository: ${env.GIT_URL}"
 '@ | Set-Content -Path build-output/dummy.ps1 -Encoding UTF8
         '''
 
