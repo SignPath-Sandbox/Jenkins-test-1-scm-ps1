@@ -1,7 +1,3 @@
-properties([
-    quietPeriod(60)
-])
-
 pipeline {
     agent any
 
