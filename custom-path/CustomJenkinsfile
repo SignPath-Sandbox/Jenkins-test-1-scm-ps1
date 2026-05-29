@@ -1,18 +1,24 @@
-stage('Checkout PowerShell file') {
-    steps {
-        dir('temp-script-repo') {
-            checkout([
-                $class: 'GitSCM',
-                branches: [[name: '*/branchA']],
-                userRemoteConfigs: [[
-                    url: 'https://github.com/SignPath-Sandbox/Jenkins-test-3-scm-ps1.git'
-                ]]
-            ])
-        }
+pipeline {
+    agent any
 
-        sh '''
-            mkdir -p build-output
-            cp temp-script-repo/script.ps1 build-output/script.ps1
-        '''
+    stages {
+        stage('Checkout PowerShell file') {
+            steps {
+                dir('temp-script-repo') {
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: '*/branchA']],
+                        userRemoteConfigs: [[
+                            url: 'https://github.com/SignPath-Sandbox/Jenkins-test-3-scm-ps1.git'
+                        ]]
+                    ])
+                }
+
+                sh '''
+                    mkdir -p build-output
+                    cp temp-script-repo/script.ps1 build-output/script.ps1
+                '''
+            }
+        }
     }
 }
