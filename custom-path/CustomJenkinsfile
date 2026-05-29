@@ -1,35 +1,76 @@
 pipeline {
-    agent any
+  agent any
 
-    stages {
-        stage('Create PowerShell file') {
-            steps {
-                sh '''
-                    mkdir -p build-output
-                    echo 'Write-Host "Hello World 1 - custom revision 1 - main branch"' > build-output/script.ps1
-                    ls -lh build-output
-                    cat build-output/script.ps1
-                '''
-            }
-        }
+  environment {
+    CONNECTOR_BASE_URL = 'https://pipelineconnector-dev5.connectors.dev.signpath.io:15001'
+    ENDPOINT_SLUG = 'StableJenkins'
+    CONNECTOR_ORGANIZATION_ID = '9ff791fc-c563-44e3-ab8c-86a33c910bbe'
 
-        stage('Archive artifact') {
-            steps {
-                archiveArtifacts artifacts: 'build-output/**', fingerprint: true
-            }
-        }
+    SIGNPATH_ORGANIZATION_ID = '9ff791fc-c563-44e3-ab8c-86a33c910bbe'
+    SIGNPATH_PROJECT_SLUG = 'PipelineConnector'
+    SIGNPATH_SIGNING_POLICY_SLUG = 'test-signing'
+    SIGNPATH_ARTIFACT_CONFIGURATION_SLUG = 'PowerShell'
+  }
 
-        stage('Sign with SignPath') {
-            steps {
-                submitSigningRequest(
-                    apiTokenCredentialId: 'SignPath.ApiToken.QA1',
-                    projectSlug: 'Jenkins-Project',
-                    signingPolicySlug: 'Jenkins_signing_policy',
-                    artifactConfigurationSlug: 'Powershell',
-                    inputArtifactPath: 'build-output/script.ps1',
-                    waitForCompletion: true
-                )
-            }
-        }
+  stages {
+    stage('Create dummy artifact') {
+      steps {
+        powershell '''
+          New-Item -ItemType Directory -Force -Path build-output | Out-Null
+
+          @'
+Write-Host "Hello from dummy SignPath test script"
+Write-Host "Build: $env:BUILD_NUMBER"
+Write-Host "Job Name: ${env.JOB_NAME}"
+Write-Host "Branch: ${env.BRANCH_NAME}"
+Write-Host "Commit: ${env.GIT_COMMIT}"
+Write-Host "Repository: ${env.GIT_URL}"
+'@ | Set-Content -Path build-output/dummy.ps1 -Encoding UTF8
+        '''
+
+        archiveArtifacts artifacts: 'build-output/dummy.ps1', fingerprint: true
+      }
     }
+
+    stage('Submit signing request') {
+      steps {
+        script {
+          def body = [
+            jobFullName: env.JOB_NAME,
+            buildNumber: env.BUILD_NUMBER as Integer,
+            artifactPath: 'build-output/dummy.ps1',
+
+            signPathOrganizationId: env.SIGNPATH_ORGANIZATION_ID,
+            signPathApiToken: 'PLACEHOLDER_SIGNPATH_API_TOKEN',
+            signPathProjectSlug: env.SIGNPATH_PROJECT_SLUG,
+            signPathSigningPolicySlug: env.SIGNPATH_SIGNING_POLICY_SLUG,
+            signPathArtifactConfigurationSlug: env.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG,
+            signingRequestDescription: "Dummy Jenkins connector test from ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+
+            parameters: [
+              [name: 'version', value: '0.0.1-dummy'],
+              [name: 'buildNumber', value: env.BUILD_NUMBER]
+            ]
+          ]
+
+          writeFile(
+            file: 'signing-request.json',
+            text: groovy.json.JsonOutput.prettyPrint(
+              groovy.json.JsonOutput.toJson(body)
+            )
+          )
+
+          powershell '''
+            $url = "$env:CONNECTOR_BASE_URL/Jenkins/$env:ENDPOINT_SLUG/$env:CONNECTOR_ORGANIZATION_ID/SigningRequests"
+
+            Invoke-RestMethod `
+              -Method Post `
+              -Uri $url `
+              -ContentType "application/json" `
+              -Body (Get-Content signing-request.json -Raw)
+          '''
+        }
+      }
+    }
+  }
 }
