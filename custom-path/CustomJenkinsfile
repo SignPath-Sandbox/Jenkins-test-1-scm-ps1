@@ -13,64 +13,66 @@ pipeline {
   }
 
   stages {
-    stage('Create dummy artifact') {
-      steps {
-        powershell '''
-          New-Item -ItemType Directory -Force -Path build-output | Out-Null
 
-          @'
-Write-Host "Hello from dummy SignPath test script"
-Write-Host "Build: $env:BUILD_NUMBER"
-Write-Host "Job Name: ${env.JOB_NAME}"
-Write-Host "Branch: ${env.BRANCH_NAME}"
-Write-Host "Commit: ${env.GIT_COMMIT}"
-Write-Host "Repository: ${env.GIT_URL}"
-'@ | Set-Content -Path build-output/dummy.ps1 -Encoding UTF8
-        '''
+        stage('Create dummy PS1 artifact') {
+            steps {
 
-        archiveArtifacts artifacts: 'build-output/dummy.ps1', fingerprint: true
-      }
-    }
+                sh '''
+                    set -eu
 
-    stage('Submit signing request') {
-      steps {
-        script {
-          def body = [
-            jobFullName: env.JOB_NAME,
-            buildNumber: env.BUILD_NUMBER as Integer,
-            artifactPath: 'build-output/dummy.ps1',
+                    mkdir -p build-output
 
-            signPathOrganizationId: env.SIGNPATH_ORGANIZATION_ID,
-            signPathApiToken: 'PLACEHOLDER_SIGNPATH_API_TOKEN',
-            signPathProjectSlug: env.SIGNPATH_PROJECT_SLUG,
-            signPathSigningPolicySlug: env.SIGNPATH_SIGNING_POLICY_SLUG,
-            signPathArtifactConfigurationSlug: env.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG,
-            signingRequestDescription: "Dummy Jenkins connector test from ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                    cat > build-output/dummy.ps1 <<'EOF'
+Write-Host "Hello from SignPath test artifact"
+Write-Host "Build Number: $env:BUILD_NUMBER"
+Write-Host "Job Name: $env.JOB_NAME"
+Write-Host "Branch: $env.BRANCH_NAME"
+Write-Host "Commit: $env.GIT_COMMIT"
+Write-Host "Repository: $env.GIT_URL"
+EOF
+                '''
 
-            parameters: [
-              [name: 'version', value: '0.0.1-dummy'],
-              [name: 'buildNumber', value: env.BUILD_NUMBER]
-            ]
-          ]
-
-          writeFile(
-            file: 'signing-request.json',
-            text: groovy.json.JsonOutput.prettyPrint(
-              groovy.json.JsonOutput.toJson(body)
-            )
-          )
-
-          powershell '''
-            $url = "$env:CONNECTOR_BASE_URL/Jenkins/$env:ENDPOINT_SLUG/$env:CONNECTOR_ORGANIZATION_ID/SigningRequests"
-
-            Invoke-RestMethod `
-              -Method Post `
-              -Uri $url `
-              -ContentType "application/json" `
-              -Body (Get-Content signing-request.json -Raw)
-          '''
+                archiveArtifacts artifacts: 'build-output/dummy.ps1', fingerprint: true
+            }
         }
-      }
+
+        stage('Submit signing request') {
+            steps {
+                script {
+
+                    def body = [
+                        jobFullName: env.JOB_NAME,
+                        buildNumber: env.BUILD_NUMBER as Integer,
+                        artifactPath: 'build-output/dummy.ps1',
+
+                        signPathOrganizationId: env.SIGNPATH_ORGANIZATION_ID,
+                        signPathApiToken: 'PLACEHOLDER_SIGNPATH_API_TOKEN',
+                        signPathProjectSlug: env.SIGNPATH_PROJECT_SLUG,
+                        signPathSigningPolicySlug: env.SIGNPATH_SIGNING_POLICY_SLUG,
+                        signPathArtifactConfigurationSlug: env.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG,
+                        signingRequestDescription: "Pipeline connector test",
+
+                        parameters: []
+                    ]
+
+                    writeFile(
+                        file: 'signing-request.json',
+                        text: groovy.json.JsonOutput.prettyPrint(
+                            groovy.json.JsonOutput.toJson(body)
+                        )
+                    )
+
+                    sh '''
+                        set -eu
+
+                        curl \
+                          -X POST \
+                          "$CONNECTOR_BASE_URL/Jenkins/$ENDPOINT_SLUG/$CONNECTOR_ORGANIZATION_ID/SigningRequests" \
+                          -H "Content-Type: application/json" \
+                          --data-binary @signing-request.json
+                    '''
+                }
+            }
+        }
     }
-  }
 }
