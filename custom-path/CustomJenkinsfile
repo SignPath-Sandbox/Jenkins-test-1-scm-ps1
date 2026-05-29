@@ -1,73 +1,15 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    CONNECTOR_BASE_URL = 'https://pipelineconnector-dev5.connectors.dev.signpath.io:15001'
-    ENDPOINT_SLUG = 'StableJenkins'
-    CONNECTOR_ORGANIZATION_ID = '9ff791fc-c563-44e3-ab8c-86a33c910bbe'
-
-    SIGNPATH_ORGANIZATION_ID = '9ff791fc-c563-44e3-ab8c-86a33c910bbe'
-    SIGNPATH_PROJECT_SLUG = 'PipelineConnector'
-    SIGNPATH_SIGNING_POLICY_SLUG = 'test-signing'
-    SIGNPATH_ARTIFACT_CONFIGURATION_SLUG = 'PowerShell'
-  }
-
-  stages {
-
-        stage('Create dummy PS1 artifact') {
+    stages {
+        stage('Create PowerShell file') {
             steps {
-
                 sh '''
-                    set -eu
-
                     mkdir -p build-output
-
-                    cat > build-output/dummy.ps1 <<'EOF'
-Write-Host "Hello from SignPath test artifact"
-Write-Host "Build Number: $env:BUILD_NUMBER"
-EOF
+                    echo 'Write-Host "Hello World 2 - revision 3 - main branch"' > build-output/script.ps1
+                    ls -lh build-output
+                    cat build-output/script.ps1
                 '''
-
-                archiveArtifacts artifacts: 'build-output/dummy.ps1', fingerprint: true
-            }
-        }
-
-        stage('Submit signing request') {
-            steps {
-                script {
-
-                    def body = [
-                        jobFullName: env.JOB_NAME,
-                        buildNumber: env.BUILD_NUMBER as Integer,
-                        artifactPath: 'build-output/dummy.ps1',
-
-                        signPathOrganizationId: env.SIGNPATH_ORGANIZATION_ID,
-                        signPathApiToken: 'PLACEHOLDER_SIGNPATH_API_TOKEN',
-                        signPathProjectSlug: env.SIGNPATH_PROJECT_SLUG,
-                        signPathSigningPolicySlug: env.SIGNPATH_SIGNING_POLICY_SLUG,
-                        signPathArtifactConfigurationSlug: env.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG,
-                        signingRequestDescription: "Pipeline connector test",
-
-                        parameters: []
-                    ]
-
-                    writeFile(
-                        file: 'signing-request.json',
-                        text: groovy.json.JsonOutput.prettyPrint(
-                            groovy.json.JsonOutput.toJson(body)
-                        )
-                    )
-
-                    sh '''
-                        set -eu
-
-                        curl \
-                          -X POST \
-                          "$CONNECTOR_BASE_URL/Jenkins/$ENDPOINT_SLUG/$CONNECTOR_ORGANIZATION_ID/SigningRequests" \
-                          -H "Content-Type: application/json" \
-                          --data-binary @signing-request.json
-                    '''
-                }
             }
         }
     }
