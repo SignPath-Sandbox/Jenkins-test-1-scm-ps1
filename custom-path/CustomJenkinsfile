@@ -10,7 +10,7 @@ pipeline {
                     mkdir -p build-output
 
                     rm -rf temp-script-repo
-                    git clone --depth 1 --branch main https://github.com/SignPath-Sandbox/Jenkins-test-3-scm-ps1.git temp-script-repo
+                    git clone --depth 1 --branch branchA https://github.com/SignPath-Sandbox/Jenkins-test-3-scm-ps1.git temp-script-repo
 
                     cp temp-script-repo/script.ps1 build-output/script.ps1
 
