@@ -1,24 +1,25 @@
-```groovy
 pipeline {
-    agent any
+agent any
 
-    stages {
-        stage('Create PowerShell file') {
-            steps {
-                sh '''
-                    set -eu
+```
+stages {
+    stage('Create PowerShell file') {
+        steps {
+            sh '''
+                set -eu
 
-                    mkdir -p build-output
+                mkdir -p build-output
 
-                    COMMIT_SHA="$(git rev-parse HEAD 2>/dev/null || echo '')"
-                    SHORT_COMMIT_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo '')"
-                    BRANCH_NAME_GIT="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '')"
-                    REMOTE_URL="$(git config --get remote.origin.url 2>/dev/null || echo '')"
-                    COMMIT_AUTHOR="$(git log -1 --pretty=format:'%an <%ae>' 2>/dev/null || echo '')"
-                    COMMIT_MESSAGE="$(git log -1 --pretty=format:'%s' 2>/dev/null || echo '')"
-                    COMMIT_DATE="$(git log -1 --pretty=format:'%cI' 2>/dev/null || echo '')"
+                COMMIT_SHA="$(git rev-parse HEAD 2>/dev/null || echo '')"
+                SHORT_COMMIT_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo '')"
+                BRANCH_NAME_GIT="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '')"
+                REMOTE_URL="$(git config --get remote.origin.url 2>/dev/null || echo '')"
+                COMMIT_AUTHOR="$(git log -1 --pretty=format:'%an <%ae>' 2>/dev/null || echo '')"
+                COMMIT_MESSAGE="$(git log -1 --pretty=format:'%s' 2>/dev/null || echo '')"
+                COMMIT_DATE="$(git log -1 --pretty=format:'%cI' 2>/dev/null || echo '')"
 
-                    cat > build-output/script.ps1 <<EOF
+                cat > build-output/script.ps1 <<EOF
+```
 
 Write-Host "Jenkins Build Number: ${BUILD_NUMBER:-}"
 Write-Host "Jenkins Build ID: ${BUILD_ID:-}"
@@ -49,26 +50,28 @@ Write-Host "GitHub SHA: ${GITHUB_SHA:-}"
 Write-Host "GitHub Actor: ${GITHUB_ACTOR:-}"
 EOF
 
-                    sha256sum build-output/script.ps1 \
-                        | cut -d ' ' -f 1 \
-                        > build-output/script.ps1.sha256
+```
+                sha256sum build-output/script.ps1 \
+                    | cut -d ' ' -f 1 \
+                    > build-output/script.ps1.sha256
 
-                    ls -lh build-output
+                ls -lh build-output
 
-                    echo "PowerShell script:"
-                    cat build-output/script.ps1
+                echo "PowerShell script:"
+                cat build-output/script.ps1
 
-                    echo "SHA-256:"
-                    cat build-output/script.ps1.sha256
-                '''
-            }
-        }
-    }
-
-    post {
-        always {
-            archiveArtifacts artifacts: 'build-output/**', fingerprint: true
+                echo "SHA-256:"
+                cat build-output/script.ps1.sha256
+            '''
         }
     }
 }
+
+post {
+    always {
+        archiveArtifacts artifacts: 'build-output/**', fingerprint: true
+    }
+}
 ```
+
+}
