@@ -1,3 +1,4 @@
+```groovy
 pipeline {
     agent any
 
@@ -48,8 +49,17 @@ Write-Host "GitHub SHA: ${GITHUB_SHA:-}"
 Write-Host "GitHub Actor: ${GITHUB_ACTOR:-}"
 EOF
 
+                    sha256sum build-output/script.ps1 \
+                        | cut -d ' ' -f 1 \
+                        > build-output/script.ps1.sha256
+
                     ls -lh build-output
+
+                    echo "PowerShell script:"
                     cat build-output/script.ps1
+
+                    echo "SHA-256:"
+                    cat build-output/script.ps1.sha256
                 '''
             }
         }
@@ -61,3 +71,4 @@ EOF
         }
     }
 }
+```
