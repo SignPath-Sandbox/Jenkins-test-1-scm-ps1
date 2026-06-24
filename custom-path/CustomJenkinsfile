@@ -48,7 +48,10 @@ Write-Host "GitHub SHA: ${GITHUB_SHA:-}"
 Write-Host "GitHub Actor: ${GITHUB_ACTOR:-}"
 EOF
 
-                openssl dgst -sha256 -binary build-output/script.ps1 \ | base64 \ | tr -d '\\n' \ > build-output/script.ps1.sha256
+                openssl dgst -sha256 -binary build-output/script.ps1 \
+                | base64 \
+                | tr -d '\\n' \
+                > build-output/script.ps1.sha256
 
                 ls -lh build-output
 
