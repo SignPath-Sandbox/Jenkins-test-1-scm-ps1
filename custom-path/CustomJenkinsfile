@@ -1,7 +1,6 @@
 pipeline {
 agent any
 
-```
 stages {
     stage('Create PowerShell file') {
         steps {
@@ -19,7 +18,6 @@ stages {
                 COMMIT_DATE="$(git log -1 --pretty=format:'%cI' 2>/dev/null || echo '')"
 
                 cat > build-output/script.ps1 <<EOF
-```
 
 Write-Host "Jenkins Build Number: ${BUILD_NUMBER:-}"
 Write-Host "Jenkins Build ID: ${BUILD_ID:-}"
@@ -50,7 +48,6 @@ Write-Host "GitHub SHA: ${GITHUB_SHA:-}"
 Write-Host "GitHub Actor: ${GITHUB_ACTOR:-}"
 EOF
 
-```
                 sha256sum build-output/script.ps1 \
                     | awk '{print $1}' \
                     > build-output/script.ps1.sha256
@@ -72,6 +69,4 @@ post {
         archiveArtifacts artifacts: 'build-output/**', fingerprint: true
     }
 }
-```
-
 }
